@@ -2,14 +2,14 @@ from scipy.optimize import fmin_cobyla
 #to do list ! ratios
  
 print '##reading data###'
-with open("C:\Users\mohamed\Desktop\NutritientList-masterunit2.csv") as f:
+with open(filepath) as f:
     lines=[line.split(',') for line in f]   
 
 print len(lines)
      
 ###read from csv### 
-n_ingredients = len(lines) - 7 # ingredients start at the eight column
-n_components = len(lines[0])-5 # components start at the fifth column
+n_rows = len(lines) - 7
+n_cols = len(lines[0])-5n
 
 ##input target spec
 components_min = map(float,lines[1][5:])
