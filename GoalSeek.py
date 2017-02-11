@@ -1,15 +1,17 @@
-from scipy.optimize import fmin_cobyla
+from scipy.optimize import fmin_slsqp
+import numpy as np
+import csv
 #to do list ! ratios
  
 print '##reading data###'
-with open(filepath) as f:
+with open("/Users/mohamedbanhawi/Desktop/NutritientList-masterunit.csv") as f:
     lines=[line.split(',') for line in f]   
 
 print len(lines)
      
 ###read from csv### 
-n_rows = len(lines) - 7
-n_cols = len(lines[0])-5n
+n_ingredients = len(lines) - 7 # ingredients start at the eight column
+n_components = len(lines[0])-5 # components start at the fifth column
 
 ##input target spec
 components_min = map(float,lines[1][5:])
@@ -20,15 +22,25 @@ components_target = map(float,lines[3][5:])
 
 ## % of component in ingredient (composition)
 c=[]
+ingredients_name = []
 ingredients_min = []
 ingredients_max = []
 intitial_ingredients = []
 for i in range(n_ingredients):
-       print lines[7+i][5:]
+       
        c.append(map(float,lines[7+i][5:]))
-       ingredients_min.append(0)
-       ingredients_max.append(0)
-       intitial_ingredients.append(0.0)
+       #print lines[7+i][3]
+       ingredients_min.append(float(lines[7+i][3])/100.0)
+       ingredients_max.append(float(lines[7+i][4])/100.0)
+       intitial_ingredients.append(float(lines[7+i][2])/100.0)
+       ingredients_name.append((lines[7+i][0]))
+
+#create constraint tuples 
+ingredients_bounds = zip(ingredients_min,ingredients_max)
+ingredients_bounds = tuple(map(tuple,ingredients_bounds))
+
+print ingredients_bounds
+print intitial_ingredients
 
 #setup 
 constraints = []
@@ -55,17 +67,18 @@ def objective(ingredient):
     for i in range(n_ingredients):
         obj = obj + ingredient [i]
     return obj**2
-	 
-#define equality range limit constraints
-for i in range(n_ingredients):
-	if ingredients_max[i]>0:
-		constraints.append(const_max(i))
-	if ingredients_min[i]>=0:
-		constraints.append(const_min(i))
+
+##-depreciated - replaced with bounds in SLSQP	 
+##define equality range limit constraints
+#for i in range(n_ingredients):
+#	if ingredients_max[i]>0:
+#		constraints.append(const_max(i))
+#	if ingredients_min[i]>=0:
+#		constraints.append(const_min(i))
 		
-	#if intitial_ingredients[i]==0:
-	intitial_ingredients.append(1.0/n_ingredients)
-#print intitial_ingredients
+#	#if intitial_ingredients[i]==0:
+#	intitial_ingredients.append(1.0/n_ingredients)
+##print intitial_ingredients
 
 #define formulas for parameter
 for j in range (n_components):
@@ -85,12 +98,19 @@ for j in range (n_components):
 		constraints.append(fmin)
 		constraints.append(fmax)
 
-print '##starting optimisation###'
- 
-res = fmin_cobyla(objective, intitial_ingredients , constraints, rhoend=1e-3)
 
-print res
+print '##starting slsqp optimisation###'
+ 
+res = fmin_slsqp(objective, intitial_ingredients , ieqcons= constraints, bounds = ingredients_bounds)
+
+res = res*100.0
 
 print '##optimisation complete###'
 
 #output to csv
+with open('/Users/mohamedbanhawi/Desktop/Results.csv', 'wb') as csvfile:
+    spamwriter = csv.writer(csvfile, delimiter=',')
+    spamwriter.writerow(['Ingredients','% of Recipe'])
+    for i in range(len(res)):
+    	spamwriter.writerow([ingredients_name[i],res[i]])
+    
